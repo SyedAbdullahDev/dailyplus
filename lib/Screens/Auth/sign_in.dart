@@ -1,10 +1,12 @@
 import 'package:dailyplus/Constants/colors.dart';
+import 'package:dailyplus/Controllers/auth.dart';
 import 'package:dailyplus/Screens/Auth/sign_up.dart';
 import 'package:dailyplus/Screens/Page/page.dart';
 import 'package:dailyplus/Widgets/mybutton.dart';
 import 'package:dailyplus/Widgets/mytext.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -15,7 +17,8 @@ class SignInScreen extends StatefulWidget {
 
 class _SignInScreenState extends State<SignInScreen> {
   bool hidePassword = true;
-
+  String error = "";
+  bool isLoading = false;
   GlobalKey<FormState> globalKey = GlobalKey<FormState>();
   TextEditingController emailcontroller = TextEditingController();
   TextEditingController passwordcontroller = TextEditingController();
@@ -230,19 +233,46 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                     RoundButton(
                       text: 'Login',
+                      loading: isLoading,
                       color: MyCustomColors().kPrimary2Color,
                       backgroundColor: MyCustomColors().kSecondryColor,
                       borderColor: MyCustomColors().kSecondryColor,
                       height: 42,
                       width: 155,
                       radius: 20,
-                      onClick: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => BottomBarWithPages(),
-                          ),
-                        );
+                      onClick: () async {
+                        setState(() {
+                          isLoading = true;
+                        });
+
+                        if (globalKey.currentState!.validate()) {
+                          error = await AuthController().loginuser(
+                            emailcontroller.text,
+                            passwordcontroller.text,
+                          );
+
+                          if (error != "") {
+                            Fluttertoast.showToast(msg: error);
+                          }
+
+                          if (error == "") {
+                            Fluttertoast.showToast(
+                                msg: "Logged in successfully");
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => BottomBarWithPages(),
+                              ),
+                            );
+                          }
+                          setState(() {
+                            isLoading = false;
+                          });
+                        } else {
+                          setState(() {
+                            isLoading = false;
+                          });
+                        }
                       },
                       fontSize: 20,
                       fontWeight: FontWeight.w400,

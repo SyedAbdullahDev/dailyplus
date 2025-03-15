@@ -1,8 +1,10 @@
 // ignore_for_file: use_full_hex_values_for_flutter_colors
 
 import 'dart:ui';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dailyplus/Constants/colors.dart';
 import 'package:dailyplus/Widgets/mytext.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -62,415 +64,241 @@ class _CalenderScreenState extends State<CalenderScreen> {
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(15.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: 10,
-              ),
-              Stack(
+      body: StreamBuilder(
+        stream: FirebaseFirestore.instance
+            .collection('habits')
+            .where("uid", isEqualTo: FirebaseAuth.instance.currentUser!.uid)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text('No Habit Found'));
+          }
+          List<Map<String, dynamic>> habitdata = snapshot.data!.docs.map((doc) {
+            return {
+              'id': doc.id,
+              ...doc.data(),
+            };
+          }).toList();
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(15.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Positioned(
-                    bottom: 5,
-                    right: 5,
-                    child: Image.asset(
-                      'assets/images/backcal.png',
-                      width: 160,
-                      fit: BoxFit.fill,
-                    ),
+                  SizedBox(
+                    height: 10,
                   ),
-                  TableCalendar(
-                    firstDay: DateTime.utc(2025, 1, 1),
-                    lastDay: DateTime.utc(2030, 12, 31),
-                    focusedDay: _focusedDay,
-                    calendarFormat: CalendarFormat.month,
-                    headerStyle: HeaderStyle(
-                      formatButtonVisible: false,
-                      titleCentered: true,
-                      titleTextStyle:
-                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                    ),
-                    calendarStyle: CalendarStyle(
-                      todayDecoration: BoxDecoration(
-                        color: Colors.blue,
-                        shape: BoxShape.rectangle,
+                  Stack(
+                    children: [
+                      Positioned(
+                        bottom: 5,
+                        right: 5,
+                        child: Image.asset(
+                          'assets/images/backcal.png',
+                          width: 160,
+                          fit: BoxFit.fill,
+                        ),
                       ),
-                      selectedDecoration: BoxDecoration(
-                        color: Colors.black,
-                        shape: BoxShape.rectangle,
+                      TableCalendar(
+                        firstDay: DateTime.utc(2025, 1, 1),
+                        lastDay: DateTime.utc(2030, 12, 31),
+                        focusedDay: _focusedDay,
+                        calendarFormat: CalendarFormat.month,
+                        headerStyle: HeaderStyle(
+                          formatButtonVisible: false,
+                          titleCentered: true,
+                          titleTextStyle: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                        calendarStyle: CalendarStyle(
+                          todayDecoration: BoxDecoration(
+                            color: Colors.blue,
+                            shape: BoxShape.rectangle,
+                          ),
+                          selectedDecoration: BoxDecoration(
+                            color: Colors.black,
+                            shape: BoxShape.rectangle,
+                          ),
+                          outsideDaysVisible: false,
+                        ),
+                        selectedDayPredicate: (day) {
+                          return isSameDay(_selectedDay, day);
+                        },
+                        onDaySelected: (selectedDay, focusedDay) {
+                          setState(() {
+                            _selectedDay = selectedDay;
+                            _focusedDay = focusedDay;
+                          });
+                        },
                       ),
-                      outsideDaysVisible: false,
+                    ],
+                  ),
+                  SizedBox(
+                    height: 10,
+                  ),
+                  SizedBox(
+                    width: MediaQuery.sizeOf(context).width,
+                    child: ListView.builder(
+                      itemCount: habitdata.length,
+                      shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(vertical: 5),
+                      itemBuilder: (context, index) {
+                        return ClipRect(
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                            child: InkWell(
+                              splashColor: Colors.transparent,
+                              highlightColor: Colors.transparent,
+                              onTap: () {
+                                FirebaseFirestore.instance
+                                    .collection('habits')
+                                    .doc(habitdata[index]['hid'])
+                                    .update(
+                                  {
+                                    'isdone': !habitdata[index]['isdone'],
+                                  },
+                                );
+                                setState(() {});
+                              },
+                              child: Container(
+                                width: MediaQuery.sizeOf(context).width,
+                                height: 70,
+                                margin: EdgeInsets.symmetric(
+                                    horizontal: 0, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  border: Border.all(
+                                    color: const Color(0xffC5D9E0),
+                                    width: 1,
+                                  ),
+                                  borderRadius: BorderRadius.circular(0),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      offset: Offset(0, 4),
+                                      blurRadius: 4,
+                                      spreadRadius: 0,
+                                    ),
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      offset: Offset(0, -4),
+                                      blurRadius: 4,
+                                      spreadRadius: 0,
+                                    ),
+                                  ],
+                                ),
+                                padding: EdgeInsets.all(10),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.start,
+                                      children: [
+                                        habitdata[index]['isdone']
+                                            ? SvgPicture.asset(
+                                                'assets/icons/ccheck.svg',
+                                                fit: BoxFit.fill,
+                                                width: 38,
+                                              )
+                                            : SvgPicture.asset(
+                                                'assets/icons/uncheck.svg',
+                                                fit: BoxFit.fill,
+                                                width: 38,
+                                              ),
+                                        SizedBox(
+                                          width: 6,
+                                        ),
+                                        Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.start,
+                                              children: [
+                                                Image.asset(
+                                                  habitdata[index]['image'],
+                                                  fit: BoxFit.fill,
+                                                  width: 25,
+                                                ),
+                                                SizedBox(
+                                                  width: 5,
+                                                ),
+                                                mytext(
+                                                  habitdata[index]['title'],
+                                                  16,
+                                                  FontWeight.w400,
+                                                  Colors.black,
+                                                  TextAlign.start,
+                                                ),
+                                              ],
+                                            ),
+                                            SizedBox(
+                                              height: 3,
+                                            ),
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.start,
+                                              children: [
+                                                mytext(
+                                                  ' 1/5 Times',
+                                                  12,
+                                                  FontWeight.w400,
+                                                  Colors.black,
+                                                  TextAlign.start,
+                                                ),
+                                                SizedBox(
+                                                  width: 5,
+                                                ),
+                                                SvgPicture.asset(
+                                                  'assets/icons/noti.svg',
+                                                  fit: BoxFit.fill,
+                                                  width: 16,
+                                                ),
+                                                SizedBox(
+                                                  width: 3,
+                                                ),
+                                                SvgPicture.asset(
+                                                  'assets/icons/reuse.svg',
+                                                  fit: BoxFit.fill,
+                                                  width: 16,
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        )
+                                      ],
+                                    ),
+                                    SvgPicture.asset(
+                                      'assets/icons/next.svg',
+                                      fit: BoxFit.fill,
+                                      width: 30,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                    selectedDayPredicate: (day) {
-                      return isSameDay(_selectedDay, day);
-                    },
-                    onDaySelected: (selectedDay, focusedDay) {
-                      setState(() {
-                        _selectedDay = selectedDay;
-                        _focusedDay = focusedDay;
-                      });
-                    },
                   ),
                 ],
               ),
-              SizedBox(
-                height: 10,
-              ),
-              ClipRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                  child: Container(
-                    width: MediaQuery.sizeOf(context).width,
-                    height: 70,
-                    margin: EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(
-                        color: const Color(0xffC5D9E0),
-                        width: 1,
-                      ),
-                      borderRadius: BorderRadius.circular(0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          offset: Offset(0, 4),
-                          blurRadius: 4,
-                          spreadRadius: 0,
-                        ),
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          offset: Offset(0, -4),
-                          blurRadius: 4,
-                          spreadRadius: 0,
-                        ),
-                      ],
-                    ),
-                    padding: EdgeInsets.all(10),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            SvgPicture.asset(
-                              'assets/icons/uncheck.svg',
-                              fit: BoxFit.fill,
-                              width: 38,
-                            ),
-                            SizedBox(
-                              width: 6,
-                            ),
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    SvgPicture.asset(
-                                      'assets/icons/drink.svg',
-                                      fit: BoxFit.fill,
-                                      width: 20,
-                                    ),
-                                    SizedBox(
-                                      width: 3,
-                                    ),
-                                    mytext(
-                                      'Drink water, keep heality',
-                                      16,
-                                      FontWeight.w400,
-                                      Colors.black,
-                                      TextAlign.start,
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 3,
-                                ),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    mytext(
-                                      ' 1/5 Times',
-                                      12,
-                                      FontWeight.w400,
-                                      Colors.black,
-                                      TextAlign.start,
-                                    ),
-                                    SizedBox(
-                                      width: 5,
-                                    ),
-                                    SvgPicture.asset(
-                                      'assets/icons/noti.svg',
-                                      fit: BoxFit.fill,
-                                      width: 16,
-                                    ),
-                                    SizedBox(
-                                      width: 3,
-                                    ),
-                                    SvgPicture.asset(
-                                      'assets/icons/reuse.svg',
-                                      fit: BoxFit.fill,
-                                      width: 16,
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            )
-                          ],
-                        ),
-                        SvgPicture.asset(
-                          'assets/icons/next.svg',
-                          fit: BoxFit.fill,
-                          width: 30,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(
-                height: 10,
-              ),
-              ClipRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                  child: Container(
-                    width: MediaQuery.sizeOf(context).width,
-                    height: 70,
-                    margin: EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(
-                        color: const Color(0xffC5D9E0),
-                        width: 1,
-                      ),
-                      borderRadius: BorderRadius.circular(0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          offset: Offset(0, 4),
-                          blurRadius: 4,
-                          spreadRadius: 0,
-                        ),
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          offset: Offset(0, -4),
-                          blurRadius: 4,
-                          spreadRadius: 0,
-                        ),
-                      ],
-                    ),
-                    padding: EdgeInsets.all(10),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            SvgPicture.asset(
-                              'assets/icons/ccheck.svg',
-                              fit: BoxFit.fill,
-                              width: 38,
-                            ),
-                            SizedBox(
-                              width: 6,
-                            ),
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    Image.asset(
-                                      'assets/images/h8.png',
-                                      fit: BoxFit.fill,
-                                      width: 20,
-                                    ),
-                                    SizedBox(
-                                      width: 3,
-                                    ),
-                                    mytext(
-                                      'Go exercising',
-                                      16,
-                                      FontWeight.w400,
-                                      Colors.black,
-                                      TextAlign.start,
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 3,
-                                ),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    mytext(
-                                      ' 7:00 am',
-                                      12,
-                                      FontWeight.w400,
-                                      Colors.black,
-                                      TextAlign.start,
-                                    ),
-                                    SizedBox(
-                                      width: 5,
-                                    ),
-                                    SvgPicture.asset(
-                                      'assets/icons/noti.svg',
-                                      fit: BoxFit.fill,
-                                      width: 16,
-                                    ),
-                                    SizedBox(
-                                      width: 3,
-                                    ),
-                                    SvgPicture.asset(
-                                      'assets/icons/reuse.svg',
-                                      fit: BoxFit.fill,
-                                      width: 16,
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            )
-                          ],
-                        ),
-                        SvgPicture.asset(
-                          'assets/icons/next.svg',
-                          fit: BoxFit.fill,
-                          width: 30,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(
-                height: 10,
-              ),
-              ClipRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                  child: Container(
-                    width: MediaQuery.sizeOf(context).width,
-                    height: 70,
-                    margin: EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(
-                        color: const Color(0xffC5D9E0),
-                        width: 1,
-                      ),
-                      borderRadius: BorderRadius.circular(0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          offset: Offset(0, 4),
-                          blurRadius: 4,
-                          spreadRadius: 0,
-                        ),
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          offset: Offset(0, -4),
-                          blurRadius: 4,
-                          spreadRadius: 0,
-                        ),
-                      ],
-                    ),
-                    padding: EdgeInsets.all(10),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            SvgPicture.asset(
-                              'assets/icons/ccheck.svg',
-                              fit: BoxFit.fill,
-                              width: 38,
-                            ),
-                            SizedBox(
-                              width: 6,
-                            ),
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    Image.asset(
-                                      'assets/images/h9.png',
-                                      fit: BoxFit.fill,
-                                      width: 20,
-                                    ),
-                                    SizedBox(
-                                      width: 3,
-                                    ),
-                                    mytext(
-                                      'Swimming',
-                                      16,
-                                      FontWeight.w400,
-                                      Colors.black,
-                                      TextAlign.start,
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: 3,
-                                ),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    mytext(
-                                      ' 8:00 am',
-                                      12,
-                                      FontWeight.w400,
-                                      Colors.black,
-                                      TextAlign.start,
-                                    ),
-                                    SizedBox(
-                                      width: 5,
-                                    ),
-                                    SvgPicture.asset(
-                                      'assets/icons/noti.svg',
-                                      fit: BoxFit.fill,
-                                      width: 16,
-                                    ),
-                                    SizedBox(
-                                      width: 3,
-                                    ),
-                                    SvgPicture.asset(
-                                      'assets/icons/reuse.svg',
-                                      fit: BoxFit.fill,
-                                      width: 16,
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            )
-                          ],
-                        ),
-                        SvgPicture.asset(
-                          'assets/icons/next.svg',
-                          fit: BoxFit.fill,
-                          width: 30,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

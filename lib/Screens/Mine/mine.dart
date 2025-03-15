@@ -322,11 +322,11 @@ class _ChartData {
 }
 
 final List<_ChartData> data = [
-  _ChartData('Sun', 0.4, Color(0xffFF928A)),
-  _ChartData('Mon', 3, Color(0xff8979FF)),
-  _ChartData('Tue', 4.6, Color(0xff3CC3DF)),
-  _ChartData('Wed', 6.5, Color(0xffFF928A)),
-  _ChartData('Thu', 6.4, Color(0xff8979FF)),
-  _ChartData('Fri', 4, Color(0xff3CC3DF)),
-  _ChartData('Sat', 2, Color(0xffFF928A)),
+  _ChartData('Sun', 0, Color(0xffFF928A)),
+  _ChartData('Mon', 0, Color(0xff8979FF)),
+  _ChartData('Tue', 0, Color(0xff3CC3DF)),
+  _ChartData('Wed', 0, Color(0xffFF928A)),
+  _ChartData('Thu', 0, Color(0xff8979FF)),
+  _ChartData('Fri', 0, Color(0xff3CC3DF)),
+  _ChartData('Sat', 1, Color(0xffFF928A)),
 ];

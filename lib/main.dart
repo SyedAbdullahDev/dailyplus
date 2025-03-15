@@ -1,7 +1,17 @@
+import 'package:dailyplus/Screens/Auth/sign_in.dart';
 import 'package:dailyplus/Screens/Page/page.dart';
+import 'package:dailyplus/firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  FirebaseAuth.instance.setPersistence(Persistence.NONE);
   runApp(const MyApp());
 }
 
@@ -16,7 +26,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.cyan),
         useMaterial3: true,
       ),
-      home: BottomBarWithPages(),
+      home:FirebaseAuth.instance.currentUser!.uid !=null ?BottomBarWithPages(): SignInScreen(),
     );
   }
 }

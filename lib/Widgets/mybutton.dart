@@ -47,9 +47,12 @@ class RoundButton extends StatelessWidget {
         onTap: loading ? null : onClick,
         child: Center(
           child: loading
-              ? CircularProgressIndicator(
-                  color: color,
-                  strokeWidth: 3,
+              ? Padding(
+                  padding: const EdgeInsets.all(5.0),
+                  child: CircularProgressIndicator(
+                    color: color,
+                    strokeWidth: 2,
+                  ),
                 )
               : Text(
                   text,
